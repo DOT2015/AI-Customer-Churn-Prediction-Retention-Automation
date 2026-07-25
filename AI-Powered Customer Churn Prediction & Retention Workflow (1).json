@@ -1,0 +1,716 @@
+{
+  "name": "AI-Powered Customer Churn Prediction & Retention Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1280,
+        16
+      ],
+      "id": "f0feda14-d0f5-4a5b-9e31-8946bb9df2db",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    customer_id,\n    first_name,\n    last_name,\n    email,\n    company,\n    country,\n    signup_date,\n    status,\n    plan_type,\n    monthly_revenue,\n    renewal_date\nFROM customers\nWHERE status = 'Active'\nORDER BY signup_date;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        -464
+      ],
+      "id": "dda05e3a-1e95-444f-a116-5e0045b20a8b",
+      "name": "Fetch Active Customer Profiles",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    customer_id,\n    COUNT(*) AS login_count,\n    MAX(login_time) AS last_login,\n    COUNT(DISTINCT device) AS devices_used\nFROM login_history\nGROUP BY customer_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        -240
+      ],
+      "id": "733dc67b-57f9-4af6-884d-a2e04df27542",
+      "name": "Fetch Customer Login Activity",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    customer_id,\n    COUNT(*) AS transaction_count,\n    SUM(amount) AS total_spend,\n    AVG(amount) AS average_transaction,\n    MAX(transaction_date) AS last_purchase\nFROM transactions\nGROUP BY customer_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        0
+      ],
+      "id": "83cbccdf-83b6-444f-8b58-03da5bc5a501",
+      "name": "Fetch Customer Transactions",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    customer_id,\n    COUNT(*) AS ticket_count,\n    SUM(CASE WHEN status='Open' THEN 1 ELSE 0 END) AS open_tickets,\n    SUM(CASE WHEN sentiment='Negative' THEN 1 ELSE 0 END) AS negative_tickets\nFROM support_tickets\nGROUP BY customer_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        240
+      ],
+      "id": "bd3d4832-7324-4bdf-804f-8274bc266719",
+      "name": "Fetch Support Tickets",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    customer_id,\n    SUM(usage_count) AS total_usage,\n    COUNT(DISTINCT feature_name) AS features_used\nFROM product_usage\nGROUP BY customer_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        432
+      ],
+      "id": "c674a796-1109-46d6-9280-363de28029b4",
+      "name": "Fetch Product Usage",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "=customer_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -672,
+        -288
+      ],
+      "id": "d0b6d2d4-fe25-4393-a24b-12e5c613b5a5",
+      "name": "Merge 1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "=customer_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -672,
+        -64
+      ],
+      "id": "74caf693-8d6d-4f2b-b8fe-23023c929f04",
+      "name": "Merge 2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "=customer_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -672,
+        160
+      ],
+      "id": "ce51c253-bab8-4190-90fc-fc4d0dbf0d6d",
+      "name": "Merge 3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "=customer_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -688,
+        384
+      ],
+      "id": "a5f8cbeb-c60f-4bff-8ea8-ff811bbab545",
+      "name": "Merge 4"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n    const customer = item.json;\n\n    // Convert values to numbers\n    const loginCount = Number(customer.login_count || 0);\n    const transactionCount = Number(customer.transaction_count || 0);\n    const totalSpend = Number(customer.total_spend || 0);\n    const avgTransaction = Number(customer.average_transaction || 0);\n    const ticketCount = Number(customer.ticket_count || 0);\n    const openTickets = Number(customer.open_tickets || 0);\n    const negativeTickets = Number(customer.negative_tickets || 0);\n    const totalUsage = Number(customer.total_usage || 0);\n    const featuresUsed = Number(customer.features_used || 0);\n    const monthlyRevenue = Number(customer.monthly_revenue || 0);\n\n    // Days since last login\n    const lastLogin = new Date(customer.last_login);\n    const today = new Date();\n\n    const daysSinceLastLogin =\n        Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));\n\n    //--------------------------------------------------\n    // Customer Health Metrics\n    //--------------------------------------------------\n\n    let engagementScore = 100;\n\n    engagementScore -= Math.min(daysSinceLastLogin * 2, 30);\n    engagementScore -= Math.max(0, 10 - loginCount);\n    engagementScore -= negativeTickets * 10;\n    engagementScore -= openTickets * 5;\n\n    engagementScore = Math.max(0, Math.min(100, engagementScore));\n\n    //--------------------------------------------------\n    // Churn Indicators\n    //--------------------------------------------------\n\n    const indicators = [];\n\n    if (daysSinceLastLogin > 14)\n        indicators.push(\"Inactive for over 14 days\");\n\n    if (loginCount < 5)\n        indicators.push(\"Low login frequency\");\n\n    if (totalSpend < 100)\n        indicators.push(\"Low customer spending\");\n\n    if (ticketCount >= 3)\n        indicators.push(\"Frequent support requests\");\n\n    if (negativeTickets > 0)\n        indicators.push(\"Negative support experience\");\n\n    if (totalUsage < 50)\n        indicators.push(\"Low product usage\");\n\n    if (monthlyRevenue < 100)\n        indicators.push(\"Low monthly revenue\");\n\n    //--------------------------------------------------\n    // Risk Score\n    //--------------------------------------------------\n\n    let riskScore = 0;\n\n    riskScore += Math.min(daysSinceLastLogin * 2, 30);\n\n    if (loginCount < 5)\n        riskScore += 15;\n\n    if (ticketCount >= 3)\n        riskScore += 10;\n\n    riskScore += negativeTickets * 10;\n\n    if (totalUsage < 50)\n        riskScore += 15;\n\n    if (totalSpend < 100)\n        riskScore += 10;\n\n    riskScore = Math.min(riskScore, 100);\n\n    //--------------------------------------------------\n    // Risk Level\n    //--------------------------------------------------\n\n    let riskLevel = \"LOW\";\n\n    if (riskScore >= 70)\n        riskLevel = \"HIGH\";\n    else if (riskScore >= 40)\n        riskLevel = \"MEDIUM\";\n\n    //--------------------------------------------------\n    // Add Engineered Features\n    //--------------------------------------------------\n\n    customer.days_since_last_login = daysSinceLastLogin;\n\n    customer.engagement_score = engagementScore;\n\n    customer.risk_score = riskScore;\n\n    customer.risk_level = riskLevel;\n\n    customer.churn_indicators = indicators;\n\n    customer.customer_health =\n        engagementScore >= 80\n            ? \"Excellent\"\n            : engagementScore >= 60\n            ? \"Good\"\n            : engagementScore >= 40\n            ? \"Fair\"\n            : \"Poor\";\n\n    return {\n        json: customer\n    };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        -144
+      ],
+      "id": "962e6a04-44e4-4845-b152-331d54924660",
+      "name": "Feature Engineering"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert customer retention analyst.\n\nAnalyze the customer data below and determine the likelihood that the customer will churn.\n\nUse the required structured output format.\n\nCustomer Data:\n\n{{ JSON.stringify($json, null, 2) }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -160,
+        -144
+      ],
+      "id": "467209e7-672d-48ae-b54b-c986cbae9c12",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        80
+      ],
+      "id": "80c459b7-f93a-44dd-aedc-b40db6cc0c40",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "nMWzh7qio4HxYAbF",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"risk_score\": 45,\n  \"risk_level\": \"MEDIUM\",\n  \"top_reasons\": [\n    \"Low product usage\",\n    \"Negative support experience\",\n    \"Frequent support tickets\"\n  ],\n  \"recommended_action\": \"Assign Customer Success Manager and schedule a retention call.\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -48,
+        80
+      ],
+      "id": "01b054d0-a84d-4b03-a030-948a7bab362a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -112,
+        288
+      ],
+      "id": "fecfdeb8-a540-4967-88cf-ae1b4a7d8e21",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "nMWzh7qio4HxYAbF",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7b66849b-9361-4484-9c79-2f7844f10d9d",
+              "leftValue": "={{ $json.output.risk_score }}",
+              "rightValue": 20,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        -144
+      ],
+      "id": "56b97e0a-6c32-4c8f-8267-44f2c5e32e0e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "churn_predictions",
+          "mode": "list",
+          "cachedResultName": "churn_predictions"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "churn_score": "={{$json.output.risk_score}}",
+            "customer_id": "={{ $('Feature Engineering').item.json.customer_id }}",
+            "prediction_date": "={{$now}}",
+            "risk_level": "={{$json.output.risk_level}}",
+            "recommendation": "={{$json.output.recommended_action}}",
+            "model_version": "gpt-5.5-v1"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "prediction_id",
+              "displayName": "prediction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_id",
+              "displayName": "customer_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prediction_date",
+              "displayName": "prediction_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "churn_score",
+              "displayName": "churn_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_level",
+              "displayName": "risk_level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recommendation",
+              "displayName": "recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model_version",
+              "displayName": "model_version",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        368,
+        96
+      ],
+      "id": "42f93c6e-e7ad-405e-8d37-ad8482565386",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "Ry5YL9K0tA51Q5dH",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "olugbojaadedeji37@gmail.com",
+        "subject": "=🚨 High Churn Risk Alert - {{$('Feature Engineering').item.json.first_name}} {{$('Feature Engineering').item.json.last_name}}",
+        "message": "=<h2>🚨 Customer Churn Alert</h2>\n\n<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\">\n<tr>\n<td><b>Customer</b></td>\n<td>{{$('Feature Engineering').item.json.first_name}} {{$('Feature Engineering').item.json.last_name}}</td>\n</tr>\n\n<tr>\n<td><b>Email</b></td>\n<td>{{$('Feature Engineering').item.json.email}}</td>\n</tr>\n\n<tr>\n<td><b>Company</b></td>\n<td>{{$('Feature Engineering').item.json.company}}</td>\n</tr>\n\n<tr>\n<td><b>Plan</b></td>\n<td>{{$('Feature Engineering').item.json.plan_type}}</td>\n</tr>\n\n<tr>\n<td><b>Monthly Revenue</b></td>\n<td>${{$('Feature Engineering').item.json.monthly_revenue}}</td>\n</tr>\n\n<tr>\n<td><b>Risk Score</b></td>\n<td>{{$json.output.risk_score}}</td>\n</tr>\n\n<tr>\n<td><b>Risk Level</b></td>\n<td>{{$json.output.risk_level}}</td>\n</tr>\n</table>\n\n<h3>Top Reasons</h3>\n\n<ul>\n<li>{{$json.output.top_reasons[0]}}</li>\n<li>{{$json.output.top_reasons[1]}}</li>\n<li>{{$json.output.top_reasons[2]}}</li>\n</ul>\n\n<h3>Recommended Action</h3>\n\n<p>{{$json.output.recommended_action}}</p>\n\n<hr>\n\n<p><i>Generated automatically by the AI Customer Churn Prediction System.</i></p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        -320
+      ],
+      "id": "a0ca2c26-ca4f-4bdc-9ffe-8fa60c249285",
+      "name": "Send a message",
+      "webhookId": "860bdb81-2c7e-4e71-9b07-c9142259e05f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PAvMRYSs6fU0kf5h",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BK9RJ840P",
+          "mode": "list",
+          "cachedResultName": "customer-churn"
+        },
+        "text": "=🚨 CUSTOMER CHURN ALERT\n\nCustomer:\n{{$('Feature Engineering').item.json.first_name}} {{$('Feature Engineering').item.json.last_name}}\n\nCustomer ID:\n{{$('Feature Engineering').item.json.customer_id}}\n\nRisk Score:\n{{$('AI Agent').item.json.output.risk_score}}\n\nRisk Level:\n{{$('AI Agent').item.json.output.risk_level}}\n\nTop Reasons:\n• {{$('AI Agent').item.json.output.top_reasons[0]}}\n• {{$('AI Agent').item.json.output.top_reasons[1]}}\n• {{$('AI Agent').item.json.output.top_reasons[2]}}\n\nRecommended Action:\n{{$('AI Agent').item.json.output.recommended_action}}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        384,
+        -128
+      ],
+      "id": "c4f76469-7cb3-438b-a8bd-7d30f02e1ee6",
+      "name": "Send Slack Alert",
+      "webhookId": "bd461494-e019-4182-80ae-21734c876604",
+      "credentials": {
+        "slackApi": {
+          "id": "M9QleqzbmtUlbc0f",
+          "name": "Slack account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Active Customer Profiles",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Customer Login Activity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Customer Transactions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Support Tickets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Product Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active Customer Profiles": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer Login Activity": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch Customer Transactions": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch Support Tickets": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 3": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Product Usage": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 4": {
+      "main": [
+        [
+          {
+            "node": "Feature Engineering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feature Engineering": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5e7c2a9f-c53d-4cba-9911-386d1e7c3954",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4bd5c503917045672c634a229153a8620e66b084905de300eac4ded9efa4516"
+  },
+  "nodeGroups": [],
+  "id": "xEVqYs5FtxUUg3Vr",
+  "tags": []
+}
